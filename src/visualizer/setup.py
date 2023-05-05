@@ -1,6 +1,6 @@
 from setuptools import setup
 
-package_name = 'visual_odometry'
+package_name = 'visualizer'
 
 setup(
     name=package_name,
@@ -9,18 +9,17 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
-        ('share/' + package_name, ['package.xml', 'launch/full_pipeline.launch.py']),
+        ('share/' + package_name, ['package.xml', 'config/visualize.rviz', 'launch/visualize.launch.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='yh6917',
     maintainer_email='yinhang0226@gmail.com',
-    description='Performs visual odometry on a video stream',
+    description='Visualization package for visual odometry',
     license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'visual_odometry = visual_odometry.visual_odometry:main',
         ],
     },
 )
