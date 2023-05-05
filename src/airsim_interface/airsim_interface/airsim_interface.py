@@ -92,8 +92,8 @@ class AirSimInterface(Node):
             curr_pose = PoseStamped()
             curr_pose.header.stamp = self.get_clock().now().to_msg()
             curr_pose.header.frame_id = "map"
-            curr_pose.pose.position.x = -car_pose_x
-            curr_pose.pose.position.y = car_pose_y
+            curr_pose.pose.position.x = car_pose_x
+            curr_pose.pose.position.y = -car_pose_y
             curr_pose.pose.position.z = car_pose_z
             """
             self.pose_msg.header.stamp = self.get_clock().now().to_msg()

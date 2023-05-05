@@ -13,11 +13,13 @@ def generate_launch_description():
     airsim_node = Node(
         package='airsim_interface',
         executable='airsim_interface',
+        name='airsim_interface',
     )
 
     visual_odom_node = Node(
         package='visual_odometry',
         executable='visual_odometry',
+        name='visual_odometry',
     )
 
     visualizer_launch = IncludeLaunchDescription(
