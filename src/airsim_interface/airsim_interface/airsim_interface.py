@@ -13,7 +13,7 @@ class AirSimInterface(Node):
     def __init__(self):
         super().__init__('airsim_interface')
         # self.publisher_ = self.create_publisher(String, 'topic', 10)
-        timer_period = 0.5  # seconds
+        timer_period = 0.1  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         
         # AirSim setup
@@ -29,15 +29,9 @@ class AirSimInterface(Node):
         self.cv_bridge = CvBridge()
 
         # Create an Image publisher
-        self.image_pub = self.create_publisher(Image, 'airsim_image', 10)
+        self.image_pub = self.create_publisher(Image, '/camera/image_raw', 10)
 
     def timer_callback(self):
-        """
-        msg = String()
-        msg.data = 'Hello World: %d' % self.i
-        self.publisher_.publish(msg)
-        self.get_logger().info('Publishing: "%s"' % msg.data)
-        """
         car_state = self.car_client.getCarState()
         self.get_logger().info('Speed: %d, Gear: %d' % (car_state.speed, car_state.gear))
         # Get images from AirSim and publish them
