@@ -18,7 +18,7 @@ class VisualOdometry(Node):
         # create a subsriber to the image topic
         self.subscription = self.create_subscription(
             Image,
-            '/airsim/image_raw',
+            '/camera/color/image_raw',
             self.image_callback,
             10)
         self.last_keypoints = None
@@ -33,24 +33,47 @@ class VisualOdometry(Node):
         self.path_msg = Path()
         self.path_msg.header.frame_id = "map"
 
+        timer_period = 0.1  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+
+        # Create a transform broadcaster for /map
+        self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
+        self.map_frame = TransformStamped()
+        # map_frame.header.stamp = self.get_clock().now().to_msg()
+        self.map_frame.header.frame_id = "map"
+        self.map_frame.child_frame_id = "odom"
+        self.map_frame.transform.translation.x = 0.0
+        self.map_frame.transform.translation.y = 0.0
+        self.map_frame.transform.translation.z = 0.0
+        self.map_frame.transform.rotation.x = 0.0
+        self.map_frame.transform.rotation.y = 0.0
+        self.map_frame.transform.rotation.z = 0.0
+        self.map_frame.transform.rotation.w = 1.0
+    
+    def timer_callback(self):
+        self.map_frame.header.stamp = self.get_clock().now().to_msg()
+        self.tf_broadcaster.sendTransform(self.map_frame)
+
     def image_callback(self, msg):
         # convert the image message to an opencv image
         cv_image = self.cv_bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         # convert the image to grayscale
         gray_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+
+        method = "sift"
         
         # Step 1: detect keypoints
-        kp, des = self.odb_feature_detector(gray_image)
+        kp, des = self.feature_detector(gray_image, method=method)
         # draw only keypoints location,not size and orientation
         img_with_keypoints = cv2.drawKeypoints(gray_image, kp, None, color=(0, 255, 0), flags=0)
         
         # Step 2: get matches
         if self.last_keypoints is not None:
-            matches = self.get_matches(des, self.last_descriptors)
+            matches = self.get_matches(des, self.last_descriptors, method=method)
             # Draw first 10 matches.
             img_with_matches = cv2.drawMatches(gray_image, kp, gray_image, self.last_keypoints, matches[:10], None, 2, flags=2)
-            # cv2.imshow("matches", img_with_matches)
-            # cv2.waitKey(1)
+            cv2.imshow("matches", img_with_matches)
+            cv2.waitKey(1)
 
             # self.get_logger().info("Number of matches: " + str(len(matches)))
             # Step 3: get transformation matrix
@@ -72,11 +95,24 @@ class VisualOdometry(Node):
         self.last_descriptors = des
         
     
-    def odb_feature_detector(self, gray_scale_image):
-        orb = cv2.ORB_create()
-        kp = orb.detect(gray_scale_image, None)
-        kp, des = orb.compute(gray_scale_image, kp)
-        return kp, des
+    def feature_detector(self, gray_scale_image, method="orb"):
+        if method=="orb":
+            orb = cv2.ORB_create()
+            kp = orb.detect(gray_scale_image, None)
+            kp, des = orb.compute(gray_scale_image, kp)
+            return kp, des
+        elif method=="sift":
+            sift = cv2.SIFT_create()
+            kp = sift.detect(gray_scale_image, None)
+            kp, des = sift.compute(gray_scale_image, kp)
+            return kp, des
+        elif method=="surf":
+            surf = cv2.SURF_create()
+            kp = surf.detect(gray_scale_image, None)
+            kp, des = surf.compute(gray_scale_image, kp)
+            return kp, des
+        else:
+            raise Exception("Unknown feature detector method: " + method)
     
     def get_matches_deprecated(self, des1, des2):
         # create BFMatcher object
@@ -87,16 +123,21 @@ class VisualOdometry(Node):
         matches = sorted(matches, key=lambda x: x.distance)
         return matches
     
-    def get_matches(self, des1, des2):
-        # create BFMatcher object
-        bf = cv2.BFMatcher(cv2.NORM_HAMMING)
+    def get_matches(self, des1, des2, method="orb"):
+        if method=="orb":
+            # create BFMatcher object
+            bf = cv2.BFMatcher(cv2.NORM_HAMMING)
+        elif method=="sift" or method=="surf":
+            bf = cv2.BFMatcher(cv2.NORM_L2)
+        else:
+            raise Exception("Unknown feature detector method: " + method)
         # Match descriptors.
         matches = bf.knnMatch(des1, des2, k=2)
 
         # Apply ratio test
         good_matches = []
         for m, n in matches:
-            if m.distance < 0.7 * n.distance:
+            if m.distance < 0.5 * n.distance:
                 good_matches.append(m)
 
         return good_matches
@@ -109,12 +150,15 @@ class VisualOdometry(Node):
             if match.queryIdx < len(self.last_keypoints) and match.trainIdx < len(new_keypoints):
                 keypoints_array1[i] = self.last_keypoints[match.queryIdx].pt
                 keypoints_array2[i] = new_keypoints[match.trainIdx].pt
+
+        # essential_matrix, mask = cv2.findEssentialMat(keypoints_array1, keypoints_array2, method=cv2.RANSAC, prob=0.999, threshold=1.0)
         essential_matrix, mask = cv2.findEssentialMat(keypoints_array1, keypoints_array2)
         _, R, t, mask = cv2.recoverPose(essential_matrix, keypoints_array1, keypoints_array2)
         transformation = np.eye(4)
         transformation[:3, :3] = R
         transformation[:3, 3] = t.ravel()
         return transformation
+
 
 
 def main(args=None):

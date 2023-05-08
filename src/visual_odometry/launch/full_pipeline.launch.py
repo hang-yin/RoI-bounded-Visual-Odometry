@@ -10,11 +10,27 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
 
+    """
     airsim_node = Node(
         package='airsim_interface',
         executable='airsim_interface',
         name='airsim_interface',
     )
+    """
+
+    launch_realsense = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+                PathJoinSubstitution([
+                    FindPackageShare('realsense2_camera'),
+                    'launch/rs_launch.py'
+                ])
+            ]),
+        launch_arguments=[('depth_module.profile', '1280x720x30'),
+                          ('pointcloud.enable', 'true'),
+                          ('align_depth.enable', 'true')]
+    )
+
+    # remap topic /camera/aligned_depth_to_color/image_raw to
 
     visual_odom_node = Node(
         package='visual_odometry',
@@ -32,7 +48,8 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        airsim_node,
+        # airsim_node,
         visual_odom_node,
         visualizer_launch,
+        launch_realsense,
     ])
