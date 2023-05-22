@@ -10,14 +10,6 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
 
-    """
-    airsim_node = Node(
-        package='airsim_interface',
-        executable='airsim_interface',
-        name='airsim_interface',
-    )
-    """
-
     launch_realsense = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
                 PathJoinSubstitution([
@@ -30,14 +22,6 @@ def generate_launch_description():
                           ('align_depth.enable', 'true')]
     )
 
-    # remap topic /camera/aligned_depth_to_color/image_raw to
-
-    visual_odom_node = Node(
-        package='visual_odometry',
-        executable='visual_odometry',
-        name='visual_odometry',
-    )
-
     visualizer_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([FindPackageShare('visualizer'), 'visualize.launch.py'])
@@ -47,9 +31,14 @@ def generate_launch_description():
         }.items(),
     )
 
+    visual_odom_node = Node(
+        package='roi_bounded_visual_odometry',
+        executable='visual_odometry',
+        name='visual_odometry',
+    )
+
     return LaunchDescription([
-        # airsim_node,
         visual_odom_node,
-        visualizer_launch,
         launch_realsense,
+        visualizer_launch
     ])
