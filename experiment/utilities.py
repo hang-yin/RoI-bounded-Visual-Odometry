@@ -81,3 +81,4 @@ class PlottingTools():
         error = np.linalg.norm(truth_path[:, :3, 3] - estimated_path[:, :3, 3], axis=1)
         plt.plot(error)
         plt.show()
+
